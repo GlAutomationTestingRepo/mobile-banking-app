@@ -1,7 +1,7 @@
 """FastAPI application entrypoint exposing basic banking operations.
 
 Run from the `backend` folder:
-    uvicorn main:app --reload
+    python -m uvicorn main:app --reload
 """
 
 from typing import List
@@ -29,13 +29,19 @@ from app.schemas import (
 from app.services_accounts import (
     create_account,
     create_account_balance,
+    delete_account,
     get_account_balance,
     get_account_by_id,
     list_account_balances,
     update_account_name,
 )
 from app.services_cards import create_card, get_card_by_id, update_card_status
-from app.services_customers import create_customer, get_customer_by_id, update_customer
+from app.services_customers import (
+    create_customer,
+    delete_customer,
+    get_customer_by_id,
+    update_customer,
+)
 from app.services_transactions import (
     cancel_transaction,
     create_transaction,
@@ -58,21 +64,31 @@ def root() -> dict:
 
 @app.post("/customers", response_model=CustomerOut, status_code=status.HTTP_201_CREATED)
 def api_create_customer(payload: CustomerCreate, db: Session = Depends(get_db)) -> CustomerOut:
-    customer = create_customer(
-        db,
-        name=payload.name,
-        lastname=payload.lastname,
-        email=payload.email,
-        phone=payload.phone,
-        gender=payload.gender,
-        birth_date=payload.birth_date,
-        status=payload.status,
-        country=payload.country,
-        nationality=payload.nationality,
-        login=payload.login,
-        password=payload.password,
-    )
+    try:
+        customer = create_customer(
+            db,
+            customer_id=payload.customer_id,
+            name=payload.name,
+            lastname=payload.lastname,
+            email=payload.email,
+            phone=payload.phone,
+            gender=payload.gender,
+            birth_date=payload.birth_date,
+            status=payload.status,
+            country=payload.country,
+            nationality=payload.nationality,
+            login=payload.login,
+            password=payload.password,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return customer
+
+
+@app.delete("/customers/{customer_id}", status_code=status.HTTP_204_NO_CONTENT)
+def api_delete_customer(customer_id: int, db: Session = Depends(get_db)) -> None:
+    if not delete_customer(db, customer_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
 
 
 @app.get("/customers/{customer_id}", response_model=CustomerOut)
@@ -112,17 +128,27 @@ def api_update_customer(
 
 @app.post("/accounts", response_model=AccountOut, status_code=status.HTTP_201_CREATED)
 def api_create_account(payload: AccountCreate, db: Session = Depends(get_db)) -> AccountOut:
-    account = create_account(
-        db,
-        customer_id=payload.customer_id,
-        account_name=payload.account_name,
-        account_type=payload.account_type,
-        initial_balance=payload.initial_balance,
-        currency=payload.currency,
-        limit_type=payload.limit_type,
-        limit_max_amount=payload.limit_max_amount,
-    )
+    try:
+        account = create_account(
+            db,
+            account_id=payload.account_id,
+            customer_id=payload.customer_id,
+            account_name=payload.account_name,
+            account_type=payload.account_type,
+            initial_balance=payload.initial_balance,
+            currency=payload.currency,
+            limit_type=payload.limit_type,
+            limit_max_amount=payload.limit_max_amount,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return account
+
+
+@app.delete("/accounts/{account_id}", status_code=status.HTTP_204_NO_CONTENT)
+def api_delete_account(account_id: int, db: Session = Depends(get_db)) -> None:
+    if not delete_account(db, account_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found")
 
 
 @app.get("/accounts/{account_id}", response_model=AccountOut)

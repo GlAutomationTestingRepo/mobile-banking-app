@@ -35,6 +35,7 @@ class CustomerBase(BaseModel):
 
 
 class CustomerCreate(BaseModel):
+    customer_id: Optional[int] = None
     name: str
     lastname: str
     email: EmailStr
@@ -73,6 +74,7 @@ class CustomerOut(CustomerBase):
 
 
 class AccountCreate(BaseModel):
+    account_id: Optional[int] = None
     customer_id: int
     account_name: str
     account_type: AccountTypeName

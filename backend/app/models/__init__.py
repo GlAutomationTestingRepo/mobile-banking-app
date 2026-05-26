@@ -18,6 +18,7 @@ from app.models.enums import (
     TransactionTypeName,
 )
 from app.models.reset_verify import ResetVerify
+from app.models.retired_id import RetiredAccountId, RetiredCustomerId
 from app.models.transaction import Transaction
 from app.models.transaction_history import TransactionHistory
 from app.models.transaction_type import TransactionType
@@ -31,6 +32,8 @@ __all__ = [
     "Customer",
     "CustomerAuth",
     "ResetVerify",
+    "RetiredAccountId",
+    "RetiredCustomerId",
     "Transaction",
     "TransactionHistory",
     "TransactionType",

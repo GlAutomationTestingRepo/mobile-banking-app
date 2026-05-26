@@ -51,7 +51,7 @@ From `backend` (PowerShell), if you run API locally via `uvicorn`:
 2. Create tables:
    - `python init_db.py`
 3. Start API:
-   - `uvicorn main:app --reload`
+   - `python -m uvicorn main:app --reload`
 
 ## Script API URL (optional)
 

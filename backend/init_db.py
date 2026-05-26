@@ -18,6 +18,8 @@ from app.models import (  # noqa: F401
     Transaction,
     TransactionHistory,
     TransactionType,
+    RetiredAccountId,
+    RetiredCustomerId,
 )
 
 

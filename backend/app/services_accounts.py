@@ -7,11 +7,13 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app.models import Account, AccountLimit, AccountsBalance, AccountTypeName
+from app.services_retired_ids import ensure_account_id_available, retire_account_id
 
 
 def create_account(
     db: Session,
     *,
+    account_id: int | None = None,
     customer_id: int,
     account_name: str,
     account_type: AccountTypeName,
@@ -23,13 +25,24 @@ def create_account(
     limit_expiration_date: Optional[datetime] = None,
 ) -> Account:
     """Create a new account with optional balance and limit."""
-    account = Account(
-        Customer_ID=customer_id,
-        Account_Name=account_name,
-        Account_Type=account_type,
-    )
+    if account_id is not None:
+        ensure_account_id_available(db, account_id)
+        if db.get(Account, account_id) is not None:
+            raise ValueError(f"Account_ID {account_id} already exists")
+
+    account_kwargs: dict = {
+        "Customer_ID": customer_id,
+        "Account_Name": account_name,
+        "Account_Type": account_type,
+    }
+    if account_id is not None:
+        account_kwargs["Account_ID"] = account_id
+
+    account = Account(**account_kwargs)
     db.add(account)
     db.flush()  # get Account_ID
+
+    ensure_account_id_available(db, account.Account_ID)
 
     balance = AccountsBalance(
         Account_ID=account.Account_ID,
@@ -53,6 +66,18 @@ def create_account(
     db.commit()
     db.refresh(account)
     return account
+
+
+def delete_account(db: Session, account_id: int) -> bool:
+    """Delete an account and retire its ID so it cannot be reused."""
+    account = db.get(Account, account_id)
+    if not account:
+        return False
+
+    retire_account_id(db, account_id)
+    db.delete(account)
+    db.commit()
+    return True
 
 
 def get_account_by_id(db: Session, account_id: int) -> Optional[Account]:

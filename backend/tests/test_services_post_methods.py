@@ -21,9 +21,10 @@ from app.models import (
     TransactionStatus,
     TransactionTypeName,
 )
-from app.services_accounts import create_account
+from app.models import RetiredAccountId, RetiredCustomerId
+from app.services_accounts import create_account, delete_account
 from app.services_cards import create_card
-from app.services_customers import create_customer
+from app.services_customers import create_customer, delete_customer
 from app.services_transactions import create_transaction, transfer_money
 from app.services_accounts import create_account_balance
 
@@ -258,6 +259,64 @@ def test_create_transaction_two_queries_and_validate_data():
         assert tx_2.Transaction_Status == TransactionStatus.Pending
         assert transactions[0].Transaction_Details == "First deposit"
         assert transactions[1].Type_ID is not None
+    finally:
+        db.close()
+
+
+def test_deleted_customer_id_cannot_be_reused():
+    db = _build_test_session()
+    try:
+        customer, _ = _create_two_customers(db)
+        customer_id = customer.Customer_ID
+        assert delete_customer(db, customer_id) is True
+
+        did_raise = False
+        try:
+            create_customer(
+                db,
+                customer_id=customer_id,
+                name="Reuse",
+                lastname="Test",
+                email="reuse@example.com",
+                phone="+999999999",
+                gender=CustomerGender.M,
+                birth_date=datetime(1990, 1, 1),
+                country="USA",
+                nationality="American",
+                login="reuse_login",
+                password="reuse_password",
+            )
+        except ValueError:
+            did_raise = True
+
+        assert did_raise is True
+        assert db.get(RetiredCustomerId, customer_id) is not None
+    finally:
+        db.close()
+
+
+def test_deleted_account_id_cannot_be_reused():
+    db = _build_test_session()
+    try:
+        customer_1, customer_2 = _create_two_customers(db)
+        account_1, _ = _create_two_accounts(db, customer_1.Customer_ID, customer_2.Customer_ID)
+        account_id = account_1.Account_ID
+        assert delete_account(db, account_id) is True
+
+        did_raise = False
+        try:
+            create_account(
+                db,
+                account_id=account_id,
+                customer_id=customer_2.Customer_ID,
+                account_name="Reused ID Account",
+                account_type=AccountTypeName.Savings,
+            )
+        except ValueError:
+            did_raise = True
+
+        assert did_raise is True
+        assert db.get(RetiredAccountId, account_id) is not None
     finally:
         db.close()
 
